@@ -157,6 +157,17 @@ input {
   line-height: 1.5;
 }
 
+.camera-preview {
+  width: 100%;
+  margin-top: 0.65rem;
+  border-radius: 10px;
+  min-height: 130px;
+  max-height: 180px;
+  object-fit: cover;
+  border: 1px solid rgba(145, 169, 255, 0.3);
+  background: rgba(4, 7, 15, 0.8);
+}
+
 .canvas-zone {
   padding: 1rem;
   display: grid;

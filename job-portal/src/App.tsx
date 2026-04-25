@@ -103,6 +103,11 @@ function App() {
   const [smoothing, setSmoothing] = useState(81);
   const [thickness, setThickness] = useState(54);
   const [textInput, setTextInput] = useState('GLYMO');
+  const [cameraStatus, setCameraStatus] = useState<'idle' | 'connecting' | 'connected' | 'error'>('idle');
+  const [cameraMessage, setCameraMessage] = useState('웹캠 권한 허용 후 손을 카메라 앞에서 움직여보세요.');
+
+  const cameraVideoRef = useRef<HTMLVideoElement>(null);
+  const streamRef = useRef<MediaStream | null>(null);
 
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const drawingRef = useRef(false);
@@ -146,6 +151,11 @@ function App() {
     return () => window.removeEventListener('resize', resizeCanvas);
   }, [resizeCanvas]);
 
+  useEffect(() => () => {
+    streamRef.current?.getTracks().forEach((track) => track.stop());
+    streamRef.current = null;
+  }, []);
+
   const clearCanvas = useCallback(() => {
     const canvas = canvasRef.current;
     const context = safeGetContext(canvas ?? null);
@@ -164,6 +174,13 @@ function App() {
     setSmoothing(81);
     setThickness(54);
     setTextInput('GLYMO');
+    setCameraStatus('idle');
+    setCameraMessage('웹캠 권한 허용 후 손을 카메라 앞에서 움직여보세요.');
+    streamRef.current?.getTracks().forEach((track) => track.stop());
+    streamRef.current = null;
+    if (cameraVideoRef.current) {
+      cameraVideoRef.current.srcObject = null;
+    }
     clearCanvas();
   };
 
@@ -238,6 +255,45 @@ function App() {
   const handlePointerUp = () => {
     drawingRef.current = false;
     lastPointRef.current = null;
+  };
+
+  const handleCameraConnect = async () => {
+    if (!navigator.mediaDevices?.getUserMedia) {
+      setCameraStatus('error');
+      setCameraMessage('이 브라우저에서는 카메라 API를 지원하지 않습니다. Safari/Chrome에서 열어주세요.');
+      return;
+    }
+
+    setCameraStatus('connecting');
+    setCameraMessage('카메라 연결 중...');
+
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: 'user' },
+        audio: false,
+      });
+
+      streamRef.current?.getTracks().forEach((track) => track.stop());
+      streamRef.current = stream;
+
+      if (cameraVideoRef.current) {
+        cameraVideoRef.current.srcObject = stream;
+      }
+
+      setCameraStatus('connected');
+      setCameraMessage('카메라 연결 완료. 손을 움직여 드로잉을 테스트해보세요.');
+    } catch (error) {
+      const name = error instanceof DOMException ? error.name : 'UnknownError';
+
+      setCameraStatus('error');
+      if (name === 'NotAllowedError') {
+        setCameraMessage('카메라 권한이 거부되었습니다. 브라우저/OS 권한을 허용해주세요.');
+      } else if (name === 'NotFoundError') {
+        setCameraMessage('사용 가능한 카메라를 찾지 못했습니다.');
+      } else {
+        setCameraMessage('카메라 연결 실패. GitHub 인앱 브라우저 대신 Safari에서 다시 시도해주세요.');
+      }
+    }
   };
 
   const handleDownloadPng = () => {
@@ -317,10 +373,11 @@ function App() {
             <h3>
               <Camera size={15} /> Camera Input
             </h3>
-            <p>웹캠 권한 허용 후 손을 카메라 앞에서 움직여보세요.</p>
-            <button type="button" className="btn full">
-              카메라 연결
+            <p>{cameraMessage}</p>
+            <button type="button" className="btn full" onClick={handleCameraConnect}>
+              {cameraStatus === 'connecting' ? '연결 중...' : cameraStatus === 'connected' ? '카메라 재연결' : '카메라 연결'}
             </button>
+            <video ref={cameraVideoRef} className="camera-preview" autoPlay muted playsInline />
           </div>
         </aside>
 

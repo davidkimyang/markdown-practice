@@ -1,7 +1,16 @@
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import App from './App';
 
-test('renders glymo studio clone layout with interaction', () => {
+test('renders glymo studio clone layout with interaction', async () => {
+  const getUserMedia = jest.fn().mockResolvedValue({
+    getTracks: () => [{ stop: jest.fn() }],
+  });
+
+  Object.defineProperty(navigator, 'mediaDevices', {
+    configurable: true,
+    value: { getUserMedia },
+  });
+
   render(<App />);
 
   expect(
@@ -9,6 +18,13 @@ test('renders glymo studio clone layout with interaction', () => {
   ).toBeInTheDocument();
 
   expect(screen.getByLabelText('drawing canvas')).toBeInTheDocument();
+
+  const connectButton = screen.getByRole('button', { name: '카메라 연결' });
+  fireEvent.click(connectButton);
+
+  await waitFor(() => {
+    expect(getUserMedia).toHaveBeenCalledTimes(1);
+  });
 
   const drawingButton = screen.getByRole('button', { name: /drawing/i });
   fireEvent.click(drawingButton);
