@@ -293,8 +293,9 @@ function App() {
         cameraVideoRef.current.srcObject = stream;
       }
 
+      setMode('drawing');
       setCameraStatus('connected');
-      setCameraMessage('카메라 연결 완료. 손을 움직여 드로잉을 테스트해보세요.');
+      setCameraMessage('카메라 연결 완료. Drawing 모드로 전환되었습니다. 손을 움직여 네온 트레일을 확인해보세요.');
     } catch (error) {
       const name = error instanceof DOMException ? error.name : 'UnknownError';
 
@@ -482,6 +483,9 @@ function App() {
             <button type="button" className="btn full" onClick={handleCameraConnect}>
               {cameraStatus === 'connecting' ? '연결 중...' : cameraStatus === 'connected' ? '카메라 재연결' : '카메라 연결'}
             </button>
+            <span className="camera-status-chip">
+              네온 트레일: {cameraStatus === 'connected' && mode === 'drawing' ? 'ON' : 'OFF'}
+            </span>
             <video ref={cameraVideoRef} className="camera-preview" autoPlay muted playsInline />
           </div>
         </aside>
