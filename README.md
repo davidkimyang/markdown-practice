@@ -1,100 +1,32 @@
-# 제목(Header)
+# MemoSaaS (Next.js + Supabase)
 
-# 제목 1
-## 제목 2
-### 제목 3
+온라인 메모 공유 서비스 SaaS 예제입니다.
 
-# 문장(Paragraph)
+## 기능
 
-동해물과 백두산이 마르고 닳도록   
-하나님이 보우하사 우리나라 만세
+- 비회원 메모 작성/저장 후 `/n/{short_id}` 링크 생성
+- 메모 조회 페이지(읽기 전용)
+- 로그인/회원가입(Supabase Auth)
+- 대시보드: 내 메모 목록, 수정, 삭제
+- 요금제: Free(하루 10개) / Pro(무제한, 만료일, 비공개)
+- 보안: 길이 제한, 스크립트 제거, API rate limit, Supabase RLS
 
-# 줄바꿈(Line Breaks)
+## 시작하기
 
-동해물과 백두산이 마르고 닳도록   
-하나님이 보우하사 우리나라 만세  
-무궁화 삼천리 화려 강산<br/>
-대한 사람 대한으로 
-
-# 강조(Emphasis)
-
-_이텔릭_  
-**두껍게**  
-**_이텔릭 + 두껍게_**  
-~~취소선~~  
-<u>밑줄</u>  
-
-# 목록(List)  
-
-1. 순서가 필요한 목록
-1. 순서가 필요한 목록 
-1. 순서가 필요한 목록  
-    1. 순서가 필요한 목록
-    1. 순서가 필요한 목록
-1. 순서가 필요한 목록
-
-- 순서가 필요하지 않는 목록
-- 순서가 필요하지 않는 목록
-- 순서가 필요하지 않는 목록
-    - 순서가 필요하지 않는 목록
-    - 순서가 필요하지 않는 목록
-- 순서가 필요하지 않는 목록
-
-# 링크(Link)
-
-<a href="http://google.com">GOOGLE</a>
-
-[GOOGLE](http://google.com)
-
-<a href="http://naver.com" title="NAVER로 이동!">NAVER</a>
-
-[NAVER](http://naver.com "NAVER로 이동!")
-
-<a href="http://naver.com" title="NAVER로 이동!" target="_blank">NAVER</a>
-
-# 이미지(Images)
-
-![HEROPY](https://heropy.blog/css/images/logo.png)
-
-[![HEROPY](https://heropy.blog/css/images/logo.png)](https://heropy.blog/)
-
-# 인용문(BlockQuote)
-
-> 남의 말이나 글에서 직접 또는 간접으로 따온 문장.  
-> (네이버 국어 사전)
-
-> 인용문을 작성하세요!
->> 중첩된 인용문
->>> 중중첩된 인용문1  
->>> 중중첩된 인용문2  
->>> 중중첩된 인용문3
-
-# 인라인(inline) 코드 강조
-
-css에서 `background` 혹은 `background-image` 속성으로 요소에 배경 이미지를 삽입할 수 있습니다. 
-
-# 블럭(Block) 코드 강조
-
-```html
-<a href="http://www.google.co.kr/" target='_blank'>GOOGLE</a>
+```bash
+cp .env.example .env.local
+npm install
+npm run dev
 ```
 
-# 표(Table)
+`NEXT_PUBLIC_BASE_URL`을 사용하는 경우 `.env.local`에 추가하세요.
 
-position 속성  
+## 필수 환경변수
 
-값 | 의미 | 기본값
---|:--:|--:
-static | 기준 없음 | O   
-relative | 요소 자신 | X  
-absolute | 위치 상 부모 요소 | X
-fixed | 뷰포트 | X
+- `NEXT_PUBLIC_SUPABASE_URL`
+- `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+- `SUPABASE_SERVICE_ROLE_KEY`
 
-# 원시 HTML(Raw HTML)
+## Supabase SQL
 
-동해물과 <u>백두산이</u> 마르고 닳도록<br/> 
-하나님이 보우하사 우리나라 만세
-
-# 수평선(Horizontal Rule)
-
----
+`supabase/schema.sql`을 SQL Editor에서 실행하세요.
