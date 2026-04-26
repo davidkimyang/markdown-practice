@@ -108,6 +108,10 @@ function App() {
 
   const cameraVideoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
+  const detectorCanvasRef = useRef<HTMLCanvasElement | null>(null);
+  const previousFrameRef = useRef<Uint8ClampedArray | null>(null);
+  const gestureLastPointRef = useRef<{ x: number; y: number } | null>(null);
+  const gestureRafRef = useRef<number | null>(null);
 
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const drawingRef = useRef(false);
@@ -152,6 +156,9 @@ function App() {
   }, [resizeCanvas]);
 
   useEffect(() => () => {
+    if (gestureRafRef.current) {
+      cancelAnimationFrame(gestureRafRef.current);
+    }
     streamRef.current?.getTracks().forEach((track) => track.stop());
     streamRef.current = null;
   }, []);
@@ -176,6 +183,12 @@ function App() {
     setTextInput('GLYMO');
     setCameraStatus('idle');
     setCameraMessage('웹캠 권한 허용 후 손을 카메라 앞에서 움직여보세요.');
+    previousFrameRef.current = null;
+    gestureLastPointRef.current = null;
+    if (gestureRafRef.current) {
+      cancelAnimationFrame(gestureRafRef.current);
+      gestureRafRef.current = null;
+    }
     streamRef.current?.getTracks().forEach((track) => track.stop());
     streamRef.current = null;
     if (cameraVideoRef.current) {
@@ -296,6 +309,98 @@ function App() {
     }
   };
 
+  useEffect(() => {
+    if (mode !== 'drawing' || cameraStatus !== 'connected') {
+      if (gestureRafRef.current) {
+        cancelAnimationFrame(gestureRafRef.current);
+        gestureRafRef.current = null;
+      }
+      previousFrameRef.current = null;
+      gestureLastPointRef.current = null;
+      return;
+    }
+
+    const video = cameraVideoRef.current;
+    const drawCanvas = canvasRef.current;
+    if (!video || !drawCanvas) {
+      return;
+    }
+
+    if (!detectorCanvasRef.current) {
+      detectorCanvasRef.current = document.createElement('canvas');
+      detectorCanvasRef.current.width = 160;
+      detectorCanvasRef.current.height = 120;
+    }
+
+    const detector = detectorCanvasRef.current;
+    const detectorContext = safeGetContext(detector);
+    if (!detectorContext) {
+      return;
+    }
+
+    const trackLoop = () => {
+      if (video.readyState < 2 || mode !== 'drawing' || cameraStatus !== 'connected') {
+        gestureRafRef.current = requestAnimationFrame(trackLoop);
+        return;
+      }
+
+      detectorContext.drawImage(video, 0, 0, detector.width, detector.height);
+      const frame = detectorContext.getImageData(0, 0, detector.width, detector.height).data;
+      const previousFrame = previousFrameRef.current;
+
+      if (previousFrame) {
+        let sumX = 0;
+        let sumY = 0;
+        let motionCount = 0;
+
+        for (let i = 0; i < frame.length; i += 16) {
+          const diffR = Math.abs(frame[i] - previousFrame[i]);
+          const diffG = Math.abs(frame[i + 1] - previousFrame[i + 1]);
+          const diffB = Math.abs(frame[i + 2] - previousFrame[i + 2]);
+          const diff = diffR + diffG + diffB;
+
+          if (diff > 90) {
+            const pixelIndex = i / 4;
+            const x = pixelIndex % detector.width;
+            const y = Math.floor(pixelIndex / detector.width);
+            sumX += x;
+            sumY += y;
+            motionCount += 1;
+          }
+        }
+
+        if (motionCount > 35) {
+          const motionX = sumX / motionCount;
+          const motionY = sumY / motionCount;
+          const canvasRect = drawCanvas.getBoundingClientRect();
+          const nextPoint = {
+            x: (motionX / detector.width) * canvasRect.width,
+            y: (motionY / detector.height) * canvasRect.height,
+          };
+
+          if (gestureLastPointRef.current) {
+            drawStroke(gestureLastPointRef.current.x, gestureLastPointRef.current.y, nextPoint.x, nextPoint.y);
+          }
+          gestureLastPointRef.current = nextPoint;
+        } else {
+          gestureLastPointRef.current = null;
+        }
+      }
+
+      previousFrameRef.current = new Uint8ClampedArray(frame);
+      gestureRafRef.current = requestAnimationFrame(trackLoop);
+    };
+
+    gestureRafRef.current = requestAnimationFrame(trackLoop);
+
+    return () => {
+      if (gestureRafRef.current) {
+        cancelAnimationFrame(gestureRafRef.current);
+        gestureRafRef.current = null;
+      }
+    };
+  }, [cameraStatus, drawStroke, mode]);
+
   const handleDownloadPng = () => {
     const canvas = canvasRef.current;
     if (!canvas) {
@@ -394,7 +499,13 @@ function App() {
           <div className="canvas-card">
             <div className="canvas-overlay">
               <Hand size={17} />
-              <span>{mode === 'text' ? 'Text tracking ready' : 'Gesture drawing ready'}</span>
+              <span>
+                {mode === 'text'
+                  ? 'Text tracking ready'
+                  : cameraStatus === 'connected'
+                    ? 'Gesture tracking active'
+                    : 'Gesture tracking (camera required)'}
+              </span>
             </div>
 
             <canvas
