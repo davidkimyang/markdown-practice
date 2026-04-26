@@ -169,6 +169,25 @@ input {
   background: rgba(4, 7, 15, 0.8);
 }
 
+.camera-preview-wrap {
+  position: relative;
+  margin-top: 0.65rem;
+}
+
+.camera-preview-wrap .camera-preview {
+  margin-top: 0;
+}
+
+.camera-neon-overlay {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  border-radius: 10px;
+  mix-blend-mode: screen;
+}
+
 .camera-status-chip {
   margin-top: 0.55rem;
   display: inline-block;

@@ -107,10 +107,12 @@ function App() {
   const [cameraMessage, setCameraMessage] = useState('웹캠 권한 허용 후 손을 카메라 앞에서 움직여보세요.');
 
   const cameraVideoRef = useRef<HTMLVideoElement>(null);
+  const cameraOverlayCanvasRef = useRef<HTMLCanvasElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const detectorCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const previousFrameRef = useRef<Uint8ClampedArray | null>(null);
   const gestureLastPointRef = useRef<{ x: number; y: number } | null>(null);
+  const cameraTrailLastPointRef = useRef<{ x: number; y: number } | null>(null);
   const gestureRafRef = useRef<number | null>(null);
 
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -193,6 +195,10 @@ function App() {
     streamRef.current = null;
     if (cameraVideoRef.current) {
       cameraVideoRef.current.srcObject = null;
+    }
+    const overlayContext = safeGetContext(cameraOverlayCanvasRef.current);
+    if (overlayContext && cameraOverlayCanvasRef.current) {
+      overlayContext.clearRect(0, 0, cameraOverlayCanvasRef.current.width, cameraOverlayCanvasRef.current.height);
     }
     clearCanvas();
   };
@@ -318,6 +324,7 @@ function App() {
       }
       previousFrameRef.current = null;
       gestureLastPointRef.current = null;
+      cameraTrailLastPointRef.current = null;
       return;
     }
 
@@ -335,6 +342,8 @@ function App() {
 
     const detector = detectorCanvasRef.current;
     const detectorContext = safeGetContext(detector);
+    const overlayCanvas = cameraOverlayCanvasRef.current;
+    const overlayContext = safeGetContext(overlayCanvas);
     if (!detectorContext) {
       return;
     }
@@ -343,6 +352,18 @@ function App() {
       if (video.readyState < 2 || mode !== 'drawing' || cameraStatus !== 'connected') {
         gestureRafRef.current = requestAnimationFrame(trackLoop);
         return;
+      }
+
+      if (overlayCanvas && overlayContext) {
+        const width = overlayCanvas.clientWidth;
+        const height = overlayCanvas.clientHeight;
+        if (width > 0 && height > 0 && (overlayCanvas.width !== width || overlayCanvas.height !== height)) {
+          overlayCanvas.width = width;
+          overlayCanvas.height = height;
+        }
+
+        overlayContext.fillStyle = 'rgba(0, 0, 0, 0.11)';
+        overlayContext.fillRect(0, 0, overlayCanvas.width, overlayCanvas.height);
       }
 
       detectorContext.drawImage(video, 0, 0, detector.width, detector.height);
@@ -383,8 +404,29 @@ function App() {
             drawStroke(gestureLastPointRef.current.x, gestureLastPointRef.current.y, nextPoint.x, nextPoint.y);
           }
           gestureLastPointRef.current = nextPoint;
+
+          if (overlayCanvas && overlayContext) {
+            const previewPoint = {
+              x: (motionX / detector.width) * overlayCanvas.width,
+              y: (motionY / detector.height) * overlayCanvas.height,
+            };
+
+            if (cameraTrailLastPointRef.current) {
+              overlayContext.strokeStyle = 'rgba(94, 255, 229, 0.95)';
+              overlayContext.lineWidth = 4.8;
+              overlayContext.shadowColor = 'rgba(80, 255, 221, 0.95)';
+              overlayContext.shadowBlur = 22;
+              overlayContext.beginPath();
+              overlayContext.moveTo(cameraTrailLastPointRef.current.x, cameraTrailLastPointRef.current.y);
+              overlayContext.lineTo(previewPoint.x, previewPoint.y);
+              overlayContext.stroke();
+            }
+
+            cameraTrailLastPointRef.current = previewPoint;
+          }
         } else {
           gestureLastPointRef.current = null;
+          cameraTrailLastPointRef.current = null;
         }
       }
 
@@ -486,7 +528,10 @@ function App() {
             <span className="camera-status-chip">
               네온 트레일: {cameraStatus === 'connected' && mode === 'drawing' ? 'ON' : 'OFF'}
             </span>
-            <video ref={cameraVideoRef} className="camera-preview" autoPlay muted playsInline />
+            <div className="camera-preview-wrap">
+              <video ref={cameraVideoRef} className="camera-preview" autoPlay muted playsInline />
+              <canvas ref={cameraOverlayCanvasRef} className="camera-neon-overlay" />
+            </div>
           </div>
         </aside>
 
