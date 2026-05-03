@@ -3,7 +3,7 @@ import { FREE_DAILY_LIMIT } from "@/lib/constants";
 import { generateShortId, validateContent } from "@/lib/security";
 import { applyRateLimit } from "@/lib/rate-limit";
 import { createSupabaseServerClient } from "@/lib/supabase-server";
-import { supabaseAdmin } from "@/lib/supabase-admin";
+import { getSupabaseAdmin } from "@/lib/supabase-admin";
 import type { PlanType } from "@/lib/types";
 
 export async function POST(req: NextRequest) {
@@ -22,7 +22,7 @@ export async function POST(req: NextRequest) {
 
     let plan: PlanType = "free";
     if (user) {
-      const { data: profile } = await supabaseAdmin
+      const { data: profile } = await getSupabaseAdmin()
         .from("profiles")
         .select("plan")
         .eq("id", user.id)
@@ -34,7 +34,7 @@ export async function POST(req: NextRequest) {
       const start = new Date();
       start.setUTCHours(0, 0, 0, 0);
 
-      const { count } = await supabaseAdmin
+      const { count } = await getSupabaseAdmin()
         .from("notes")
         .select("id", { count: "exact", head: true })
         .gte("created_at", start.toISOString())
@@ -49,7 +49,7 @@ export async function POST(req: NextRequest) {
     const isPrivate = plan === "pro" ? Boolean(body.isPrivate) : false;
     const expiresAt = plan === "pro" ? body.expiresAt : null;
 
-    const { error } = await supabaseAdmin.from("notes").insert({
+    const { error } = await getSupabaseAdmin().from("notes").insert({
       user_id: user?.id ?? null,
       short_id: shortId,
       content,
