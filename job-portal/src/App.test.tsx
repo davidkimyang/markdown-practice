@@ -1,15 +1,43 @@
-import React from 'react';
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import App from './App';
 
-test('renders notes app and can create a new note', () => {
+test('renders glymo studio clone layout with interaction', async () => {
+  const getUserMedia = jest.fn().mockResolvedValue({
+    getTracks: () => [{ stop: jest.fn() }],
+  });
+
+  Object.defineProperty(navigator, 'mediaDevices', {
+    configurable: true,
+    value: { getUserMedia },
+  });
+
   render(<App />);
 
-  expect(screen.getByRole('heading', { name: '메모' })).toBeInTheDocument();
-  expect(screen.getByPlaceholderText('메모 검색')).toBeInTheDocument();
+  expect(
+    screen.getByRole('heading', { name: '손짓만으로 네온/오로라 드로잉을 만드는 AI 스튜디오' }),
+  ).toBeInTheDocument();
 
-  fireEvent.click(screen.getByRole('button', { name: '새 메모 생성' }));
+  expect(screen.getByLabelText('drawing canvas')).toBeInTheDocument();
 
-  expect(screen.getByDisplayValue('새 메모')).toBeInTheDocument();
-  expect(screen.getByPlaceholderText('여기에 메모를 작성하세요')).toBeInTheDocument();
+  const connectButton = screen.getByRole('button', { name: '카메라 연결' });
+  fireEvent.click(connectButton);
+
+  await waitFor(() => {
+    expect(getUserMedia).toHaveBeenCalledTimes(1);
+  });
+
+  const drawingButton = screen.getByRole('button', { name: /drawing/i });
+  fireEvent.click(drawingButton);
+  expect(drawingButton).toHaveAttribute('aria-pressed', 'true');
+
+  const auroraEffect = screen.getByRole('button', { name: /aurora/i });
+  fireEvent.click(auroraEffect);
+  expect(auroraEffect).toHaveAttribute('aria-pressed', 'true');
+
+  const resetButton = screen.getByRole('button', { name: '초기화' });
+  fireEvent.click(resetButton);
+
+  expect(screen.getByRole('button', { name: /text/i })).toHaveAttribute('aria-pressed', 'true');
+  expect(screen.getByRole('button', { name: /neon/i })).toHaveAttribute('aria-pressed', 'true');
+  expect(screen.getByRole('button', { name: '캔버스 지우기' })).toBeInTheDocument();
 });
