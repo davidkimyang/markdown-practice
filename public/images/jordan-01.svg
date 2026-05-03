@@ -1,0 +1,6 @@
+<svg xmlns='http://www.w3.org/2000/svg' width='800' height='520' viewBox='0 0 800 520'>
+  <defs><linearGradient id='g' x1='0' x2='1'><stop offset='0%' stop-color='#0f172a'/><stop offset='100%' stop-color='#be123c'/></linearGradient></defs>
+  <rect width='800' height='520' fill='url(#g)'/>
+  <text x='50%' y='44%' fill='#fff' font-size='64' font-family='Arial' text-anchor='middle'>MICHAEL JORDAN</text>
+  <text x='50%' y='58%' fill='#fecdd3' font-size='36' font-family='Arial' text-anchor='middle'>Legacy Scene 01</text>
+</svg>
