@@ -10,6 +10,80 @@
 - `main` 브랜치는 2026-05-06 기준 `9a374a0` 커밋까지 진행되어 있고, 최근 커밋에 기능 추가와 가격 가드 보강이 섞여 있습니다.
 - 따라서 현 시점에서는 `main`을 그대로 추적하기보다, 검증된 특정 커밋을 고정해서 내부 기준 버전으로 관리하는 전략이 필요합니다.
 
+
+## 실행 방식 정리
+
+AI-Trader는 사용 목적에 따라 실행 방식이 다릅니다. 결론부터 말하면, **일반 사용이나 빠른 검토는 사이트에서 실행**하고, **코드 검토·수정·자체 배포는 저장소를 내려받아 실행**합니다.
+
+### 1. 사이트에서 바로 사용
+
+사람 사용자는 `https://ai4trade.ai`에 접속해 이메일로 가입한 뒤 시그널 탐색, 구매, 팔로우, 페이퍼 트레이딩을 사용합니다.
+
+AI 에이전트는 별도 파일을 먼저 내려받아 실행하기보다, 에이전트에게 아래 문장을 전달해 hosted skill을 읽고 등록하게 하는 방식이 기본 흐름입니다.
+
+```text
+Read https://ai4trade.ai/skill/ai4trade and register on the platform.
+Compatibility alias: https://ai4trade.ai/SKILL.md
+```
+
+이 방식은 AI-Trader 운영 서버의 API와 대시보드를 사용하는 것이므로, 로컬 서버를 직접 띄울 필요가 없습니다.
+
+### 2. Skill 파일만 내려받아 에이전트에 수동 설치
+
+에이전트 프레임워크가 원격 skill 자동 설치를 지원하지 않거나 내부 검토가 필요하면 skill Markdown만 내려받아 확인합니다.
+
+```bash
+curl https://ai4trade.ai/skill/ai4trade
+curl https://ai4trade.ai/skill/copytrade
+curl https://ai4trade.ai/skill/tradesync
+curl https://ai4trade.ai/skill/polymarket
+```
+
+이 경우에도 실제 API 호출 대상은 기본적으로 AI-Trader hosted API입니다. 즉, “파일 다운로드형 앱”이라기보다 “Markdown skill을 읽고 원격 API를 사용하는 방식”에 가깝습니다.
+
+### 3. 저장소를 내려받아 자체 실행 또는 포크 개발
+
+코드를 수정하거나 자체 서버를 띄우려면 GitHub 저장소를 클론하고, 검증한 baseline commit으로 고정합니다.
+
+```bash
+git clone https://github.com/HKUDS/AI-Trader.git
+cd AI-Trader
+git checkout 9a374a0
+cp .env.example .env
+```
+
+백엔드는 FastAPI 앱과 background worker가 분리되어 있으므로 개발/검증 시 두 프로세스를 따로 실행하는 것을 전제로 봅니다.
+
+```bash
+# 터미널 1: API 서버
+python service/server/main.py
+
+# 터미널 2: 가격 갱신, 수익 기록, 정산, market-intel 등 백그라운드 작업
+python service/server/worker.py
+```
+
+프론트엔드는 `service/frontend`의 Vite 앱을 별도 실행합니다.
+
+```bash
+cd service/frontend
+npm install
+npm run dev
+```
+
+단, upstream README에는 self-hosting용 전체 runbook이 충분히 정리되어 있지 않으므로, 실제 자체 배포 전에 Python 의존성 설치 방법, 데이터베이스 설정, 환경 변수, CORS, 백그라운드 작업 중복 실행 여부를 별도로 검증해야 합니다.
+
+### 실행 방식 선택 기준
+
+| 목적 | 권장 방식 | 이유 |
+| --- | --- | --- |
+| 기능을 빠르게 체험 | 사이트 접속 | 설치 없이 계정 생성 후 사용 가능 |
+| AI 에이전트 연결 | hosted skill 읽기 | 에이전트가 skill 문서를 읽고 원격 API에 등록 |
+| skill 내용 검토 | skill Markdown 다운로드 | API payload와 권한 흐름을 사전 검토 가능 |
+| 코드 수정/보안 검토 | 저장소 클론 후 commit pinning | 재현 가능한 baseline에서 분석 가능 |
+| 자체 서비스 운영 | 포크 후 self-hosting | 운영 리스크와 설정을 직접 통제 가능 |
+
+운영 관점에서는 **먼저 사이트/페이퍼 트레이딩으로 기능을 확인하고, 그다음 저장소를 내려받아 baseline commit을 고정한 뒤 self-hosting을 검토**하는 순서를 권장합니다.
+
 ## 권장 정책
 
 ### 1. 외부 의존 기준은 커밋 SHA로 고정
